@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   calcularPrecioRecurso,
+  codigoVisibleRecurso,
   type RecursoCalculable,
 } from "./calculosRecursos";
 
@@ -213,7 +214,7 @@ export default function VistaEquipos({
     if (!texto) return equipos;
 
     return equipos.filter((equipo) =>
-      `${prefijo}-${equipo.codigo}`.toLowerCase().includes(texto) ||
+      codigoVisibleRecurso(prefijo, equipo.codigo).toLowerCase().includes(texto) ||
       equipo.codigo.includes(texto) ||
       equipo.nombre.toLowerCase().includes(texto)
     );
@@ -392,7 +393,7 @@ export default function VistaEquipos({
             } focus-within:bg-[#fff8dc]`}
           >
             <Celda><span className="font-bold text-zinc-500">{prefijo}</span></Celda>
-            <Celda><span className="font-semibold">{equipo.codigo}</span></Celda>
+            <Celda><span className="font-semibold">{codigoVisibleRecurso(prefijo, equipo.codigo)}</span></Celda>
             <Celda>{equipo.nombre}</Celda>
             <Celda>{equipo.unidad}</Celda>
             <Celda derecha>

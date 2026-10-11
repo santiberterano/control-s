@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { calcularPrecioRecurso } from "../app/proyectos/[id]/componentes/calculosRecursos.ts";
+import { calcularPrecioRecurso, codigoVisibleRecurso } from "../app/proyectos/[id]/componentes/calculosRecursos.ts";
 
 const recursos = [
   { tipo: "CON", codigo: "001", nombre: "Dólar", precio: 1000, formula: "=1000" },
@@ -33,4 +33,20 @@ test("mantiene la protección contra referencias circulares", () => {
 test("acepta registros antiguos que todavía no tienen fórmula", () => {
   const legado = { tipo: "INS", codigo: "PIN-001", nombre: "Pintura", precio: 750 };
   assert.equal(calcularPrecioRecurso(legado, [legado]), 750);
+});
+
+test("presenta códigos estables con el sufijo de cada biblioteca", () => {
+  assert.equal(codigoVisibleRecurso("MDO", "012"), "12M");
+  assert.equal(codigoVisibleRecurso("ALQ", "007"), "7E");
+  assert.equal(codigoVisibleRecurso("SUB", "015"), "15S");
+  assert.equal(codigoVisibleRecurso("CON", "003"), "3C");
+  assert.equal(codigoVisibleRecurso("INS", "HAO-001"), "HAO-001");
+});
+
+test("resuelve referencias de fórmula con los códigos visibles", () => {
+  const porCodigoVisible = [
+    { tipo: "MDO", codigo: "012", nombre: "Oficial", precio: 2500, formula: "=2500" },
+    { tipo: "ALQ", codigo: "007", nombre: "Equipo", precio: 0, formula: "=[12M]*2" },
+  ];
+  assert.equal(calcularPrecioRecurso(porCodigoVisible[1], porCodigoVisible), 5000);
 });

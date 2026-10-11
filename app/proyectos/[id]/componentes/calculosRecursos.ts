@@ -14,6 +14,13 @@ function normalizar(texto: string) {
     .toUpperCase();
 }
 
+export function codigoVisibleRecurso(tipo: RecursoCalculable["tipo"], codigo: string) {
+  if (tipo === "INS") return codigo;
+  const sufijo = { MDO: "M", ALQ: "E", SUB: "S", CON: "C" }[tipo];
+  const numero = Number(codigo);
+  return `${Number.isFinite(numero) ? numero : codigo}${sufijo}`;
+}
+
 export function evaluarOperacion(expresion: string) {
   let posicion = 0;
 
@@ -113,6 +120,11 @@ function buscarReferencia(
   recursos: RecursoCalculable[]
 ) {
   const texto = normalizar(referencia);
+  const visible = texto.match(/^(\d+)([MESC])$/);
+  if (visible) {
+    const tipo = { M: "MDO", E: "ALQ", S: "SUB", C: "CON" }[visible[2]] as RecursoCalculable["tipo"];
+    return recursos.find((recurso) => recurso.tipo === tipo && Number(recurso.codigo) === Number(visible[1]));
+  }
   const codigoCompleto = texto.match(/^(MDO|ALQ|SUB|CON)-(\d{3})$/);
 
   if (codigoCompleto) {

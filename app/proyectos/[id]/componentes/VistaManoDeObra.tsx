@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   calcularPrecioRecurso,
+  codigoVisibleRecurso,
   type RecursoCalculable,
 } from "./calculosRecursos";
 
@@ -212,7 +213,7 @@ export default function VistaManoDeObra({
 
     return manoDeObra.filter((registro) => {
       const codigoCompleto =
-        `MDO-${registro.codigo}`.toLowerCase();
+        codigoVisibleRecurso("MDO", registro.codigo).toLowerCase();
 
       return (
         codigoCompleto.includes(texto) ||
@@ -448,7 +449,7 @@ export default function VistaManoDeObra({
 
             <Celda>
               <span className="font-semibold">
-                {registro.codigo}
+                {codigoVisibleRecurso("MDO", registro.codigo)}
               </span>
             </Celda>
 

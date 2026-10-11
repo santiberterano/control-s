@@ -17,7 +17,7 @@ import VistaSubcontratos, {
 import VistaConstantes, {
   type Constante,
 } from "./[id]/componentes/VistaConstantes";
-import { calcularPrecioRecurso, type RecursoCalculable } from "./[id]/componentes/calculosRecursos";
+import { calcularPrecioRecurso, codigoVisibleRecurso, type RecursoCalculable } from "./[id]/componentes/calculosRecursos";
 import { useEstadoPersistido } from "./[id]/componentes/useEstadoPersistido";
 import VistaInsumos, {
   categoriasIniciales,
@@ -185,10 +185,10 @@ export default function ProyectoPage() {
 
   const recursosApu: RecursoApu[] = [
     ...insumos.map((recurso) => ({ ...recurso, tipo: "INS" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "INS" as const }, referencias) ?? recurso.precio })),
-    ...manoDeObra.map((recurso) => ({ ...recurso, tipo: "MDO" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "MDO" as const }, referencias) ?? recurso.precio })),
-    ...equipos.map((recurso) => ({ ...recurso, tipo: "ALQ" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "ALQ" as const }, referencias) ?? recurso.precio })),
-    ...subcontratos.map((recurso) => ({ ...recurso, tipo: "SUB" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "SUB" as const }, referencias) ?? recurso.precio })),
-    ...constantes.map((recurso) => ({ ...recurso, tipo: "CON" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "CON" as const }, referencias) ?? recurso.precio })),
+    ...manoDeObra.map((recurso) => ({ ...recurso, codigo: codigoVisibleRecurso("MDO", recurso.codigo), tipo: "MDO" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "MDO" as const }, referencias) ?? recurso.precio })),
+    ...equipos.map((recurso) => ({ ...recurso, codigo: codigoVisibleRecurso("ALQ", recurso.codigo), tipo: "ALQ" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "ALQ" as const }, referencias) ?? recurso.precio })),
+    ...subcontratos.map((recurso) => ({ ...recurso, codigo: codigoVisibleRecurso("SUB", recurso.codigo), tipo: "SUB" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "SUB" as const }, referencias) ?? recurso.precio })),
+    ...constantes.map((recurso) => ({ ...recurso, codigo: codigoVisibleRecurso("CON", recurso.codigo), tipo: "CON" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "CON" as const }, referencias) ?? recurso.precio })),
   ];
 
   return (
