@@ -17,6 +17,7 @@ import VistaConstantes, {
 } from "./componentes/VistaConstantes";
 import type { RecursoCalculable } from "./componentes/calculosRecursos";
 import { useEstadoPersistido } from "./componentes/useEstadoPersistido";
+import type { PrefijoRecurso } from "./componentes/VistaRecursos";
 
 export type ItemPresupuesto = {
   id: number;
@@ -146,6 +147,26 @@ export default function ProyectoPage() {
     ...constantes.map((registro) => ({ ...registro, tipo: "CON" as const })),
   ];
 
+  function renombrarReferencia(
+    _tipo: PrefijoRecurso,
+    _codigo: string,
+    nombreAnterior: string,
+    nombreNuevo: string
+  ) {
+    const escapado = nombreAnterior.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const patron = new RegExp(`\\[${escapado}\\]`, "gi");
+    const reemplazar = <T extends { formula: string }>(registros: T[]) =>
+      registros.map((registro) => ({
+        ...registro,
+        formula: registro.formula.replace(patron, `[${nombreNuevo}]`),
+      }));
+
+    setManoDeObra(reemplazar);
+    setEquipos(reemplazar);
+    setSubcontratos(reemplazar);
+    setConstantes(reemplazar);
+  }
+
   return (
     <main className="min-h-screen bg-[#f4f4f2]">
       <Ribbon
@@ -168,6 +189,7 @@ export default function ProyectoPage() {
               manoDeObra={manoDeObra}
               setManoDeObra={setManoDeObra}
               referencias={referencias}
+              onRenombrarReferencia={renombrarReferencia}
             />
           )}
 
@@ -176,6 +198,7 @@ export default function ProyectoPage() {
               equipos={equipos}
               setEquipos={setEquipos}
               referencias={referencias}
+              onRenombrarReferencia={renombrarReferencia}
             />
           )}
 
@@ -184,6 +207,7 @@ export default function ProyectoPage() {
               subcontratos={subcontratos}
               setSubcontratos={setSubcontratos}
               referencias={referencias}
+              onRenombrarReferencia={renombrarReferencia}
             />
           )}
 
@@ -192,6 +216,7 @@ export default function ProyectoPage() {
               constantes={constantes}
               setConstantes={setConstantes}
               referencias={referencias}
+              onRenombrarReferencia={renombrarReferencia}
             />
           )}
 
