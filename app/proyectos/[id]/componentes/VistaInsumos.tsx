@@ -9,6 +9,11 @@ import {
   useState,
 } from "react";
 
+import {
+  calcularPrecioRecurso,
+  type RecursoCalculable,
+} from "./calculosRecursos";
+
 export type CategoriaInsumo = {
   id: number;
   nombre: string;
@@ -25,6 +30,7 @@ export type Insumo = {
   nombre: string;
   unidad: string;
   precio: number;
+  formula: string;
   comentario: string;
   creado: string;
   modificado: string;
@@ -55,6 +61,7 @@ type Props = {
   setCategorias: React.Dispatch<React.SetStateAction<CategoriaInsumo[]>>;
   insumos: Insumo[];
   setInsumos: React.Dispatch<React.SetStateAction<Insumo[]>>;
+  referencias: RecursoCalculable[];
 };
 
 type Menu = { id: number; x: number; y: number };
@@ -76,7 +83,7 @@ function sugerirPrefijo(nombre: string) {
   return letras.slice(0, 3);
 }
 
-export default function VistaInsumos({ categorias, setCategorias, insumos, setInsumos }: Props) {
+export default function VistaInsumos({ categorias, setCategorias, insumos, setInsumos, referencias }: Props) {
   const [categoriaActiva, setCategoriaActiva] = useState<number | "todos">("todos");
   const [ultimaCategoria, setUltimaCategoria] = useState<number | null>(categorias[0]?.id ?? null);
   const [busqueda, setBusqueda] = useState("");
@@ -95,12 +102,16 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
   const [nuevaCategoriaId, setNuevaCategoriaId] = useState<number | null>(null);
   const [nuevaUnidad, setNuevaUnidad] = useState("u");
   const [nuevoPrecio, setNuevoPrecio] = useState("");
+  const [nuevaFormula, setNuevaFormula] = useState("");
 
   const nuevoNombreRef = useRef<HTMLInputElement>(null);
   const nuevaUnidadRef = useRef<HTMLInputElement>(null);
   const nuevoPrecioRef = useRef<HTMLInputElement>(null);
+  const nuevaFormulaRef = useRef<HTMLInputElement>(null);
   const nombresRef = useRef(new Map<number, HTMLInputElement>());
+  const formulasOriginales = useRef(new Map<number, string>());
   const cancelandoNombre = useRef(false);
+  const cancelandoFormula = useRef<number | null>(null);
 
   useEffect(() => {
     const fecha = hoy();
@@ -126,11 +137,12 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
 
     let insumosCambiaron = false;
     const insumosMigrados = insumos.map((insumo) => {
-      if (insumo.comentario !== undefined && insumo.creado && insumo.modificado) return insumo;
+      if (insumo.comentario !== undefined && insumo.formula !== undefined && insumo.creado && insumo.modificado) return insumo;
       insumosCambiaron = true;
       return {
         ...insumo,
         comentario: insumo.comentario ?? "",
+        formula: insumo.formula ?? "",
         creado: insumo.creado || fecha,
         modificado: insumo.modificado || insumo.creado || fecha,
       };
@@ -255,6 +267,9 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
     if (!nombre) return setError("Ingresá el nombre del insumo.");
     if (!unidad) return setError("Ingresá una unidad.");
     if (!Number.isFinite(precio) || precio < 0) return setError("Ingresá un precio válido.");
+    if (nuevaFormula.trim() && !nuevaFormula.trim().startsWith("=")) {
+      return setError("La fórmula debe comenzar con =.");
+    }
     const { correlativo, codigo } = proximoCodigo(categoria);
     const fecha = hoy();
     const nuevo: Insumo = {
@@ -264,6 +279,7 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
       nombre,
       unidad,
       precio,
+      formula: nuevaFormula.trim(),
       comentario: "",
       creado: fecha,
       modificado: fecha,
@@ -276,6 +292,7 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
     setNuevoNombre("");
     setNuevaUnidad("u");
     setNuevoPrecio("");
+    setNuevaFormula("");
     setError("");
     requestAnimationFrame(() => nuevoNombreRef.current?.focus());
   }
@@ -331,8 +348,8 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
   const insumoMenu = menu ? insumos.find((insumo) => insumo.id === menu.id) : undefined;
   const todas = categoriaActiva === "todos";
   const columnas = todas
-    ? "grid-cols-[115px_minmax(230px,1fr)_190px_85px_130px_110px_46px]"
-    : "grid-cols-[115px_minmax(260px,1fr)_85px_140px_110px_46px]";
+    ? "grid-cols-[115px_minmax(220px,1fr)_180px_80px_125px_minmax(190px,1fr)_105px_46px]"
+    : "grid-cols-[115px_minmax(240px,1fr)_80px_130px_minmax(210px,1fr)_105px_46px]";
 
   return (
     <div>
@@ -391,7 +408,7 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
         <div className={`grid ${columnas} border-b border-zinc-300 bg-[#f7f7f5]`}>
           <Cabecera>Código</Cabecera><Cabecera>Insumo</Cabecera>
           {todas && <Cabecera>Categoría</Cabecera>}
-          <Cabecera>Unidad</Cabecera><Cabecera>Precio</Cabecera><Cabecera>Modificado</Cabecera><div />
+          <Cabecera>Unidad</Cabecera><Cabecera>Precio</Cabecera><Cabecera>Fórmula</Cabecera><Cabecera>Modificado</Cabecera><div />
         </div>
         {visibles.map((insumo) => {
           const estaSeleccionado = seleccionado === insumo.id;
@@ -406,7 +423,8 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
                 </div>
                 {todas && <div className="border-r border-zinc-200 p-1.5"><CategoriaAutocomplete categorias={categoriasOrdenadas} valorId={insumo.categoriaId} onChange={(categoriaId) => actualizarInsumo(insumo.id, { categoriaId })} /></div>}
                 <div className="border-r border-zinc-200 p-1.5"><input value={insumo.unidad} onChange={(event) => actualizarInsumo(insumo.id, { unidad: event.target.value })} className="h-8 w-full rounded border border-transparent bg-transparent px-2 text-sm outline-none focus:border-[#E6B012] focus:bg-white" /></div>
-                <div className="border-r border-zinc-200 p-1.5"><input value={insumo.precio} type="number" min="0" onChange={(event) => actualizarInsumo(insumo.id, { precio: Number(event.target.value) })} className="h-8 w-full rounded border border-transparent bg-transparent px-2 text-right text-sm outline-none focus:border-[#E6B012] focus:bg-white" /></div>
+                <div className="border-r border-zinc-200 p-1.5"><input value={calcularPrecioRecurso({ tipo: "INS", codigo: insumo.codigo, nombre: insumo.nombre, precio: insumo.precio, formula: insumo.formula }, referencias) ?? insumo.precio} type="number" min="0" onChange={(event) => actualizarInsumo(insumo.id, { precio: Number(event.target.value), formula: "" })} className="h-8 w-full rounded border border-transparent bg-transparent px-2 text-right text-sm outline-none focus:border-[#E6B012] focus:bg-white" /></div>
+                <div className="border-r border-zinc-200 p-1.5"><input value={insumo.formula} onFocus={() => formulasOriginales.current.set(insumo.id, insumo.formula)} onChange={(event) => actualizarInsumo(insumo.id, { formula: event.target.value })} onBlur={() => { if (cancelandoFormula.current === insumo.id) { cancelandoFormula.current = null; return; } if (insumo.formula.trim() && !insumo.formula.trim().startsWith("=")) setError("La fórmula debe comenzar con =."); else setError(""); formulasOriginales.current.delete(insumo.id); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } if (event.key === "Escape") { cancelandoFormula.current = insumo.id; const original = formulasOriginales.current.get(insumo.id); if (original !== undefined) actualizarInsumo(insumo.id, { formula: original }); event.currentTarget.blur(); } }} placeholder="Ej: =[DOLAR]*1.2" className="h-8 w-full rounded border border-transparent bg-transparent px-2 font-mono text-xs outline-none focus:border-[#E6B012] focus:bg-white" /></div>
                 <Celda>{insumo.modificado || insumo.creado || hoy()}</Celda>
                 <button type="button" title="Comentarios" onClick={(event) => { event.stopPropagation(); setComentarioAbierto((actual) => actual === insumo.id ? null : insumo.id); }} className={`text-sm ${insumo.comentario ? "text-[#b88700]" : "text-zinc-300"} hover:bg-zinc-100`}>●</button>
               </div>
@@ -420,7 +438,8 @@ export default function VistaInsumos({ categorias, setCategorias, insumos, setIn
           <div className="border-r border-zinc-200 p-1.5"><input ref={nuevoNombreRef} value={nuevoNombre} onChange={(event) => setNuevoNombre(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); nuevaUnidadRef.current?.focus(); } if (event.key === "Escape") setNuevoNombre(""); }} placeholder="+ Nuevo insumo..." className="h-9 w-full rounded border border-transparent bg-transparent px-2 text-sm outline-none focus:border-[#E6B012] focus:bg-white" /></div>
           {todas && <div className="border-r border-zinc-200 p-1.5"><CategoriaAutocomplete categorias={categoriasOrdenadas} valorId={nuevaCategoriaId} onChange={(id) => { setNuevaCategoriaId(id); setUltimaCategoria(id); }} /></div>}
           <div className="border-r border-zinc-200 p-1.5"><input ref={nuevaUnidadRef} value={nuevaUnidad} onChange={(event) => setNuevaUnidad(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); nuevoPrecioRef.current?.focus(); nuevoPrecioRef.current?.select(); } }} className="h-9 w-full rounded border border-transparent bg-transparent px-2 text-sm outline-none focus:border-[#E6B012] focus:bg-white" /></div>
-          <div className="border-r border-zinc-200 p-1.5"><input ref={nuevoPrecioRef} value={nuevoPrecio} inputMode="decimal" onChange={(event) => setNuevoPrecio(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); crearInsumo(); } if (event.key === "Escape") setNuevoPrecio(""); }} placeholder="$ 0" className="h-9 w-full rounded border border-transparent bg-transparent px-2 text-right text-sm outline-none focus:border-[#E6B012] focus:bg-white" /></div>
+          <div className="border-r border-zinc-200 p-1.5"><input ref={nuevoPrecioRef} value={nuevoPrecio} inputMode="decimal" onChange={(event) => setNuevoPrecio(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); nuevaFormulaRef.current?.focus(); } if (event.key === "Escape") setNuevoPrecio(""); }} placeholder="$ 0" className="h-9 w-full rounded border border-transparent bg-transparent px-2 text-right text-sm outline-none focus:border-[#E6B012] focus:bg-white" /></div>
+          <div className="border-r border-zinc-200 p-1.5"><input ref={nuevaFormulaRef} value={nuevaFormula} onChange={(event) => setNuevaFormula(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); crearInsumo(); } if (event.key === "Escape") setNuevaFormula(""); }} placeholder="Fórmula opcional" className="h-9 w-full rounded border border-transparent bg-transparent px-2 font-mono text-xs outline-none focus:border-[#E6B012] focus:bg-white" /></div>
           <Celda>Enter para agregar</Celda><div />
         </div>
       </div>

@@ -1,5 +1,5 @@
 export type RecursoCalculable = {
-  tipo: "MDO" | "ALQ" | "SUB" | "CON";
+  tipo: "MDO" | "ALQ" | "SUB" | "CON" | "INS";
   codigo: string;
   nombre: string;
   precio: number;
@@ -122,6 +122,12 @@ function buscarReferencia(
         recurso.codigo === codigoCompleto[2]
     );
   }
+
+  const codigoDirecto = recursos.find(
+    (recurso) => normalizar(recurso.codigo) === texto
+  );
+
+  if (codigoDirecto) return codigoDirecto;
 
   if (/^\d{3}$/.test(texto)) {
     return recursos.find(

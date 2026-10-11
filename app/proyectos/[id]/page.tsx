@@ -154,6 +154,7 @@ export default function ProyectoPage() {
   );
 
   const referencias: RecursoCalculable[] = [
+    ...insumos.map((registro) => ({ ...registro, tipo: "INS" as const })),
     ...manoDeObra.map((registro) => ({ ...registro, tipo: "MDO" as const })),
     ...equipos.map((registro) => ({ ...registro, tipo: "ALQ" as const })),
     ...subcontratos.map((registro) => ({ ...registro, tipo: "SUB" as const })),
@@ -183,6 +184,7 @@ export default function ProyectoPage() {
               setCategorias={setCategoriasInsumos}
               insumos={insumos}
               setInsumos={setInsumos}
+              referencias={referencias}
             />
           )}
 
