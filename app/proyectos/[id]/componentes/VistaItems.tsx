@@ -73,6 +73,7 @@ export default function VistaItems({
     useState("");
 
   const [error, setError] = useState("");
+  const [itemSeleccionado, setItemSeleccionado] = useState<number | null>(null);
 
   const numeroNuevoRef = useRef<HTMLInputElement>(null);
   const descripcionNuevaRef =
@@ -333,7 +334,12 @@ export default function VistaItems({
         {items.map((item) => (
           <div
             key={item.id}
-            className="grid grid-cols-[120px_1fr_220px_46px] border-b border-zinc-200 bg-white focus-within:bg-[#fffdf5]"
+            onClick={() => setItemSeleccionado(item.id)}
+            className={`grid grid-cols-[120px_1fr_220px_46px] border-b border-zinc-200 transition focus-within:bg-[#fff8dc] ${
+              itemSeleccionado === item.id
+                ? "bg-[#fff8dc] shadow-[inset_3px_0_0_#E6B012]"
+                : "bg-white hover:bg-[#fffdf5]"
+            }`}
           >
 
             <div className="border-r border-zinc-200">
