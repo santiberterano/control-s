@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:formulas": "node --experimental-strip-types --test tests/calculos-recursos.test.mjs",
-    "test:apu": "node --experimental-strip-types --test tests/apu.test.mjs"
+    "test:apu": "node --experimental-strip-types --test tests/apu.test.mjs",
+    "test:presupuesto": "node --experimental-strip-types --test tests/presupuesto.test.mjs"
   },
   "dependencies": {
     "next": "16.3.5",

@@ -25,6 +25,7 @@ import VistaInsumos, {
 } from "./[id]/componentes/VistaInsumos";
 import VistaApu from "./[id]/componentes/VistaApu";
 import type { Apu, FamiliaApu, RecursoApu } from "./[id]/componentes/apu";
+import type { PartidaPresupuesto, RubroPresupuesto } from "./[id]/componentes/presupuesto";
 
 export type ItemPresupuesto = {
   id: number;
@@ -42,7 +43,7 @@ export default function ProyectoPage() {
    * ITEMS
    */
 
-  const [items, setItems] = useEstadoPersistido<ItemPresupuesto[]>(
+  const [items] = useEstadoPersistido<ItemPresupuesto[]>(
     "ctrl-s:26031:items",
     [
     {
@@ -65,6 +66,8 @@ export default function ProyectoPage() {
     },
     ]
   );
+  const [rubros, setRubros] = useEstadoPersistido<RubroPresupuesto[]>("ctrl-s:26031:rubros-presupuesto", []);
+  const [partidas, setPartidas] = useEstadoPersistido<PartidaPresupuesto[]>("ctrl-s:26031:partidas-presupuesto", []);
 
   const [categoriasInsumos, setCategoriasInsumos] = useEstadoPersistido<CategoriaInsumo[]>(
     "ctrl-s:26031:categorias-insumos",
@@ -201,8 +204,11 @@ export default function ProyectoPage() {
 
           {activeSection === "Items" && (
             <VistaItems
-              items={items}
-              setItems={setItems}
+              itemsLegacy={items}
+              rubros={rubros}
+              setRubros={setRubros}
+              partidas={partidas}
+              setPartidas={setPartidas}
               apus={apus}
               recursos={recursosApu}
             />
