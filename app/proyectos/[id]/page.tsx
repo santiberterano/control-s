@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Ribbon from "./componentes/Ribbon";
 import VistaItems from "./componentes/VistaItems";
+import VistaPresupuesto from "./componentes/VistaPresupuesto";
 import VistaManoDeObra, {
   type ManoDeObra,
 } from "./componentes/VistaManoDeObra";
@@ -194,6 +195,15 @@ export default function ProyectoPage() {
               rubros={rubros}
               setRubros={setRubros}
               partidas={partidas}
+            />
+          )}
+
+          {activeSection === "Presupuesto" && (
+            <VistaPresupuesto
+              itemsLegacy={items}
+              rubros={rubros}
+              setRubros={setRubros}
+              partidas={partidas}
               setPartidas={setPartidas}
               apus={apus}
               recursos={recursosApu}
@@ -247,6 +257,7 @@ export default function ProyectoPage() {
           )}
 
           {activeSection !== "Items" &&
+            activeSection !== "Presupuesto" &&
             activeSection !== "Insumos" &&
             activeSection !== "APU" &&
             activeSection !== "Mano de obra" &&
