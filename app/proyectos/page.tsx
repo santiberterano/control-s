@@ -18,6 +18,11 @@ import VistaConstantes, {
 } from "./[id]/componentes/VistaConstantes";
 import type { RecursoCalculable } from "./[id]/componentes/calculosRecursos";
 import { useEstadoPersistido } from "./[id]/componentes/useEstadoPersistido";
+import VistaInsumos, {
+  categoriasIniciales,
+  type CategoriaInsumo,
+  type Insumo,
+} from "./[id]/componentes/VistaInsumos";
 
 export type ItemPresupuesto = {
   id: number;
@@ -55,6 +60,15 @@ export default function ProyectoPage() {
       subtotal: 38450000,
     },
     ]
+  );
+
+  const [categoriasInsumos, setCategoriasInsumos] = useEstadoPersistido<CategoriaInsumo[]>(
+    "ctrl-s:26031:categorias-insumos",
+    categoriasIniciales()
+  );
+  const [insumos, setInsumos] = useEstadoPersistido<Insumo[]>(
+    "ctrl-s:26031:insumos",
+    []
   );
 
   /*
@@ -177,6 +191,15 @@ export default function ProyectoPage() {
             />
           )}
 
+          {activeSection === "Insumos" && (
+            <VistaInsumos
+              categorias={categoriasInsumos}
+              setCategorias={setCategoriasInsumos}
+              insumos={insumos}
+              setInsumos={setInsumos}
+            />
+          )}
+
           {/* MANO DE OBRA */}
 
           {activeSection === "Mano de obra" && (
@@ -214,6 +237,7 @@ export default function ProyectoPage() {
           {/* SECCIONES TODAVIA NO DESARROLLADAS */}
 
           {activeSection !== "Items" &&
+            activeSection !== "Insumos" &&
             activeSection !== "Mano de obra" &&
             activeSection !== "Equipos" &&
             activeSection !== "Subcontratos" &&
