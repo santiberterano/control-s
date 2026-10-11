@@ -29,3 +29,8 @@ test("mantiene la protección contra referencias circulares", () => {
   ];
   assert.equal(calcularPrecioRecurso(circulares[0], circulares), null);
 });
+
+test("acepta registros antiguos que todavía no tienen fórmula", () => {
+  const legado = { tipo: "INS", codigo: "PIN-001", nombre: "Pintura", precio: 750 };
+  assert.equal(calcularPrecioRecurso(legado, [legado]), 750);
+});

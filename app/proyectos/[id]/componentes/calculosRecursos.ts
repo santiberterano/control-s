@@ -147,7 +147,8 @@ export function calcularPrecioRecurso(
   recursos: RecursoCalculable[],
   visitados = new Set<string>()
 ): number | null {
-  const formula = recurso.formula.trim();
+  // Compatibilidad con registros persistidos antes de incorporar fórmulas.
+  const formula = recurso.formula?.trim() ?? "";
   const clave = `${recurso.tipo}-${recurso.codigo}`;
 
   if (!formula) return recurso.precio;
