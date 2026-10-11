@@ -202,6 +202,7 @@ export default function VistaEquipos({
   const [busqueda, setBusqueda] = useState("");
   const [creandoNuevo, setCreandoNuevo] = useState(false);
   const [error, setError] = useState("");
+  const [seleccionado, setSeleccionado] = useState<number | null>(null);
   const [nuevoCodigo, setNuevoCodigo] = useState("");
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevaUnidad, setNuevaUnidad] = useState("h");
@@ -383,7 +384,12 @@ export default function VistaEquipos({
         {resultados.map((equipo) => (
           <div
             key={equipo.id}
-            className="grid grid-cols-[80px_90px_minmax(240px,1fr)_100px_160px_minmax(220px,1fr)_150px] border-b border-zinc-200 last:border-b-0 hover:bg-[#fffdf5]"
+            onClick={() => setSeleccionado(equipo.id)}
+            className={`grid grid-cols-[80px_90px_minmax(240px,1fr)_100px_160px_minmax(220px,1fr)_150px] border-b border-zinc-200 transition ${
+              seleccionado === equipo.id
+                ? "bg-[#fff8dc] shadow-[inset_3px_0_0_#E6B012]"
+                : "hover:bg-[#fffdf5]"
+            } focus-within:bg-[#fff8dc]`}
           >
             <Celda><span className="font-bold text-zinc-500">{prefijo}</span></Celda>
             <Celda><span className="font-semibold">{equipo.codigo}</span></Celda>

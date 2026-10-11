@@ -16,14 +16,23 @@ import VistaSubcontratos, {
 import VistaConstantes, {
   type Constante,
 } from "./[id]/componentes/VistaConstantes";
-import type { RecursoCalculable } from "./[id]/componentes/calculosRecursos";
+import { calcularPrecioRecurso, type RecursoCalculable } from "./[id]/componentes/calculosRecursos";
 import { useEstadoPersistido } from "./[id]/componentes/useEstadoPersistido";
+import VistaInsumos, {
+  categoriasIniciales,
+  type CategoriaInsumo,
+  type Insumo,
+} from "./[id]/componentes/VistaInsumos";
+import VistaApu from "./[id]/componentes/VistaApu";
+import type { Apu, RecursoApu } from "./[id]/componentes/apu";
 
 export type ItemPresupuesto = {
   id: number;
   numero: string;
   descripcion: string;
   subtotal: number;
+  apuId?: number;
+  cantidad?: number;
 };
 
 export default function ProyectoPage() {
@@ -56,6 +65,16 @@ export default function ProyectoPage() {
     },
     ]
   );
+
+  const [categoriasInsumos, setCategoriasInsumos] = useEstadoPersistido<CategoriaInsumo[]>(
+    "ctrl-s:26031:categorias-insumos",
+    categoriasIniciales()
+  );
+  const [insumos, setInsumos] = useEstadoPersistido<Insumo[]>(
+    "ctrl-s:26031:insumos",
+    []
+  );
+  const [apus, setApus] = useEstadoPersistido<Apu[]>("ctrl-s:biblioteca:apus", []);
 
   /*
    * MANO DE OBRA
@@ -152,10 +171,19 @@ export default function ProyectoPage() {
   );
 
   const referencias: RecursoCalculable[] = [
+    ...insumos.map((registro) => ({ ...registro, tipo: "INS" as const })),
     ...manoDeObra.map((registro) => ({ ...registro, tipo: "MDO" as const })),
     ...equipos.map((registro) => ({ ...registro, tipo: "ALQ" as const })),
     ...subcontratos.map((registro) => ({ ...registro, tipo: "SUB" as const })),
     ...constantes.map((registro) => ({ ...registro, tipo: "CON" as const })),
+  ];
+
+  const recursosApu: RecursoApu[] = [
+    ...insumos.map((recurso) => ({ ...recurso, tipo: "INS" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "INS" as const }, referencias) ?? recurso.precio })),
+    ...manoDeObra.map((recurso) => ({ ...recurso, tipo: "MDO" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "MDO" as const }, referencias) ?? recurso.precio })),
+    ...equipos.map((recurso) => ({ ...recurso, tipo: "ALQ" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "ALQ" as const }, referencias) ?? recurso.precio })),
+    ...subcontratos.map((recurso) => ({ ...recurso, tipo: "SUB" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "SUB" as const }, referencias) ?? recurso.precio })),
+    ...constantes.map((recurso) => ({ ...recurso, tipo: "CON" as const, precio: calcularPrecioRecurso({ ...recurso, tipo: "CON" as const }, referencias) ?? recurso.precio })),
   ];
 
   return (
@@ -174,7 +202,23 @@ export default function ProyectoPage() {
             <VistaItems
               items={items}
               setItems={setItems}
+              apus={apus}
+              recursos={recursosApu}
             />
+          )}
+
+          {activeSection === "Insumos" && (
+            <VistaInsumos
+              categorias={categoriasInsumos}
+              setCategorias={setCategoriasInsumos}
+              insumos={insumos}
+              setInsumos={setInsumos}
+              referencias={referencias}
+            />
+          )}
+
+          {activeSection === "APU" && (
+            <VistaApu apus={apus} setApus={setApus} recursos={recursosApu} />
           )}
 
           {/* MANO DE OBRA */}
@@ -214,6 +258,8 @@ export default function ProyectoPage() {
           {/* SECCIONES TODAVIA NO DESARROLLADAS */}
 
           {activeSection !== "Items" &&
+            activeSection !== "Insumos" &&
+            activeSection !== "APU" &&
             activeSection !== "Mano de obra" &&
             activeSection !== "Equipos" &&
             activeSection !== "Subcontratos" &&

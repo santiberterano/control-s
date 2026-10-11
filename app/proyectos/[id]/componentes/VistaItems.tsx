@@ -2,18 +2,20 @@
 
 import {
   KeyboardEvent,
-  useMemo,
   useRef,
   useState,
 } from "react";
 
 import type { ItemPresupuesto } from "../page";
+import { calcularCostoApu, type Apu, type RecursoApu } from "./apu";
 
 type VistaItemsProps = {
   items: ItemPresupuesto[];
   setItems: React.Dispatch<
     React.SetStateAction<ItemPresupuesto[]>
   >;
+  apus: Apu[];
+  recursos: RecursoApu[];
 };
 
 function parseNumero(numero: string) {
@@ -67,23 +69,30 @@ function formatearMoneda(valor: number) {
 export default function VistaItems({
   items,
   setItems,
+  apus,
+  recursos,
 }: VistaItemsProps) {
   const [nuevoNumero, setNuevoNumero] = useState("");
   const [nuevaDescripcion, setNuevaDescripcion] =
     useState("");
 
   const [error, setError] = useState("");
+  const [itemSeleccionado, setItemSeleccionado] = useState<number | null>(null);
 
   const numeroNuevoRef = useRef<HTMLInputElement>(null);
   const descripcionNuevaRef =
     useRef<HTMLInputElement>(null);
 
-  const totalCosto = useMemo(() => {
-    return items.reduce(
-      (acumulado, item) => acumulado + item.subtotal,
-      0
-    );
-  }, [items]);
+  function subtotalItem(item: ItemPresupuesto) {
+    if (!item.apuId) return item.subtotal;
+    const costo = calcularCostoApu(item.apuId, apus, recursos);
+    return costo === null ? item.subtotal : costo * (item.cantidad ?? 1);
+  }
+
+  const totalCosto = items.reduce(
+    (acumulado, item) => acumulado + subtotalItem(item),
+    0
+  );
 
   function limpiarError() {
     if (error) {
@@ -173,6 +182,12 @@ export default function VistaItems({
             }
           : item
       )
+    );
+  }
+
+  function actualizarDatosItem(id: number, cambios: Partial<ItemPresupuesto>) {
+    setItems((actuales) =>
+      actuales.map((item) => item.id === id ? { ...item, ...cambios } : item)
     );
   }
 
@@ -312,7 +327,7 @@ export default function VistaItems({
 
       <div className="overflow-hidden rounded-lg border border-zinc-300 bg-white">
 
-        <div className="grid grid-cols-[120px_1fr_220px_46px] border-b border-zinc-300 bg-[#f7f7f5]">
+        <div className="grid grid-cols-[120px_1fr_180px_90px_220px_46px] border-b border-zinc-300 bg-[#f7f7f5]">
 
           <div className="border-r border-zinc-300 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
             Nº
@@ -320,6 +335,14 @@ export default function VistaItems({
 
           <div className="border-r border-zinc-300 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
             Item
+          </div>
+
+          <div className="border-r border-zinc-300 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            APU vinculado
+          </div>
+
+          <div className="border-r border-zinc-300 px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            Cant.
           </div>
 
           <div className="border-r border-zinc-300 px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
@@ -333,7 +356,12 @@ export default function VistaItems({
         {items.map((item) => (
           <div
             key={item.id}
-            className="grid grid-cols-[120px_1fr_220px_46px] border-b border-zinc-200 bg-white focus-within:bg-[#fffdf5]"
+            onClick={() => setItemSeleccionado(item.id)}
+            className={`grid grid-cols-[120px_1fr_180px_90px_220px_46px] border-b border-zinc-200 transition focus-within:bg-[#fff8dc] ${
+              itemSeleccionado === item.id
+                ? "bg-[#fff8dc] shadow-[inset_3px_0_0_#E6B012]"
+                : "bg-white hover:bg-[#fffdf5]"
+            }`}
           >
 
             <div className="border-r border-zinc-200">
@@ -370,8 +398,23 @@ export default function VistaItems({
               />
             </div>
 
+            <div className="border-r border-zinc-200 p-1.5">
+              <select
+                value={item.apuId ?? ""}
+                onChange={(event) => actualizarDatosItem(item.id, { apuId: event.target.value ? Number(event.target.value) : undefined })}
+                className="h-9 w-full rounded border border-transparent bg-transparent px-2 text-xs outline-none focus:border-[#E6B012] focus:bg-white"
+              >
+                <option value="">Sin vincular</option>
+                {apus.map((apu) => <option key={apu.id} value={apu.id}>{apu.codigo} · {apu.descripcion}</option>)}
+              </select>
+            </div>
+
+            <div className="border-r border-zinc-200 p-1.5">
+              <input type="number" min="0" value={item.cantidad ?? 1} onChange={(event) => actualizarDatosItem(item.id, { cantidad: Number(event.target.value) })} className="h-9 w-full rounded border border-transparent bg-transparent px-2 text-right text-sm outline-none focus:border-[#E6B012] focus:bg-white" />
+            </div>
+
             <div className="border-r border-zinc-200 px-4 py-3 text-right font-medium text-zinc-800">
-              {formatearMoneda(item.subtotal)}
+              {formatearMoneda(subtotalItem(item))}
             </div>
 
             <button
@@ -386,7 +429,7 @@ export default function VistaItems({
           </div>
         ))}
 
-        <div className="grid grid-cols-[120px_1fr_220px_46px] bg-[#fffdf5]">
+        <div className="grid grid-cols-[120px_1fr_180px_90px_220px_46px] bg-[#fffdf5]">
 
           <div className="border-r border-zinc-200">
             <input
@@ -404,6 +447,9 @@ export default function VistaItems({
               className="h-full w-full bg-transparent px-4 py-3 font-medium text-zinc-900 outline-none placeholder:text-zinc-300"
             />
           </div>
+
+          <div className="border-r border-zinc-200 px-4 py-3 text-zinc-300">—</div>
+          <div className="border-r border-zinc-200 px-4 py-3 text-right text-zinc-300">1</div>
 
           <div className="border-r border-zinc-200">
             <input

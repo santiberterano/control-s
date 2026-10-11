@@ -1,5 +1,5 @@
 export type RecursoCalculable = {
-  tipo: "MDO" | "ALQ" | "SUB" | "CON";
+  tipo: "MDO" | "ALQ" | "SUB" | "CON" | "INS";
   codigo: string;
   nombre: string;
   precio: number;
@@ -14,7 +14,7 @@ function normalizar(texto: string) {
     .toUpperCase();
 }
 
-function evaluarOperacion(expresion: string) {
+export function evaluarOperacion(expresion: string) {
   let posicion = 0;
 
   function omitirEspacios() {
@@ -123,6 +123,12 @@ function buscarReferencia(
     );
   }
 
+  const codigoDirecto = recursos.find(
+    (recurso) => normalizar(recurso.codigo) === texto
+  );
+
+  if (codigoDirecto) return codigoDirecto;
+
   if (/^\d{3}$/.test(texto)) {
     return recursos.find(
       (recurso) => recurso.tipo === origen.tipo && recurso.codigo === texto
@@ -141,7 +147,8 @@ export function calcularPrecioRecurso(
   recursos: RecursoCalculable[],
   visitados = new Set<string>()
 ): number | null {
-  const formula = recurso.formula.trim();
+  // Compatibilidad con registros persistidos antes de incorporar fórmulas.
+  const formula = recurso.formula?.trim() ?? "";
   const clave = `${recurso.tipo}-${recurso.codigo}`;
 
   if (!formula) return recurso.precio;
