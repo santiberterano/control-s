@@ -54,10 +54,15 @@ export function proximoCodigoApu(familia: FamiliaApu, apus: Apu[]) {
 
 export function cantidadComponente(componente: ComponenteApu) {
   const formula = componente.formulaCantidad.trim();
-  const calculada = formula
-    ? evaluarOperacion(formula.startsWith("=") ? formula.slice(1) : formula)
-    : componente.cantidad;
-  return (calculada ?? componente.cantidad) * componente.factor;
+  if (!formula) return componente.cantidad * componente.factor;
+  if (!formula.startsWith("=")) return Number.NaN;
+  const calculada = evaluarOperacion(formula.slice(1));
+  return calculada === null ? Number.NaN : calculada * componente.factor;
+}
+
+export function formulaCantidadValida(formula: string) {
+  const texto = formula.trim();
+  return !texto || (texto.startsWith("=") && evaluarOperacion(texto.slice(1)) !== null);
 }
 
 export function calcularCostoApu(
@@ -74,6 +79,7 @@ export function calcularCostoApu(
 
   for (const componente of [...apu.componentes].sort((a, b) => a.orden - b.orden)) {
     const cantidad = cantidadComponente(componente);
+    if (!Number.isFinite(cantidad)) return null;
     const precio = componente.tipo === "APU"
       ? calcularCostoApu(componente.recursoId, apus, recursos, siguientes)
       : recursos.find(

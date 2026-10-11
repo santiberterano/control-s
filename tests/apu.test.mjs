@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   calcularCostoApu,
+  cantidadComponente,
   creariaCiclo,
   explotarApu,
+  formulaCantidadValida,
   proximoCodigoApu,
 } from "../app/proyectos/[id]/componentes/apu.ts";
 
@@ -51,6 +53,21 @@ const apus = [
 
 test("calcula recursos mixtos y conserva fórmulas de cantidad", () => {
   assert.equal(calcularCostoApu(10, apus, recursos), 250);
+});
+
+test("la fórmula modifica exclusivamente la cantidad y admite paréntesis", () => {
+  const componente = { id: 1, tipo: "INS", recursoId: 1, cantidad: 99, formulaCantidad: "=2*(3+1)", factor: 1, orden: 0 };
+  assert.equal(cantidadComponente(componente), 8);
+  assert.equal(recursos[0].precio, 10);
+  assert.equal(formulaCantidadValida(componente.formulaCantidad), true);
+});
+
+test("rechaza fórmulas de cantidad incorrectas sin usar silenciosamente la cantidad manual", () => {
+  const componente = { id: 1, tipo: "INS", recursoId: 1, cantidad: 99, formulaCantidad: "=2*(3+)", factor: 1, orden: 0 };
+  assert.equal(formulaCantidadValida(componente.formulaCantidad), false);
+  assert.equal(Number.isNaN(cantidadComponente(componente)), true);
+  const invalido = [{ id: 99, codigo: "ERR", descripcion: "Error", unidad: "u", modificado: "", orden: 0, componentes: [componente] }];
+  assert.equal(calcularCostoApu(99, invalido, recursos), null);
 });
 
 test("propaga costos encapsulados sin contabilizar el detalle dos veces", () => {
