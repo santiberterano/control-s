@@ -275,7 +275,9 @@ export default function ProyectoPage() {
 
           {activeSection === "Legajo de Obra" && (
             <VistaLegajo
+              proyectoId="26031"
               nombreObra="Edificio Varese"
+              dolarPredeterminado={constantes.find((constante) => constante.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "dolar")?.precio ?? 0}
               rubros={rubros}
               partidas={partidas}
               apus={apus}

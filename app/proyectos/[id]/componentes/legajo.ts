@@ -1,11 +1,24 @@
 import { cantidadComponente, type Apu, type RecursoApu, type TipoComponenteApu } from "./apu.ts";
-import { calcularPartida, cantidadDesdeFormula, type PartidaPresupuesto, type RubroPresupuesto } from "./presupuesto.ts";
+import { calcularPartida, cantidadDesdeFormula, precioRecursoPresupuesto, type PartidaPresupuesto, type RubroPresupuesto } from "./presupuesto.ts";
 
 export type TipoInformeLegajo = "previsto" | "explotado" | "insumos";
 export type FilaInforme = Record<string, string | number>;
 export type SeccionInforme = { titulo: string; columnas: string[]; filas: FilaInforme[] };
 export type InformeLegajo = { titulo: string; descripcion: string; secciones: SeccionInforme[]; advertencias: string[]; total?: number };
 export type FamiliaRecurso = { recursoId: number; nombre: string };
+export type ConfiguracionCostoPrevisto = { nombreObra: string; version: string; dolar: number; base: string };
+export type FilaCostoPrevisto = {
+  tipo: "partida" | "oculto";
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  cantidad: number | null;
+  precioUnitario: number | null;
+  importe: number | null;
+  incidencia: number | null;
+};
+export type RubroCostoPrevisto = { codigo: string; nombre: string; filas: FilaCostoPrevisto[]; subtotal: number; completo: boolean };
+export type ModeloCostoPrevisto = { rubros: RubroCostoPrevisto[]; total: number; completo: boolean; advertencias: string[] };
 
 type DatosLegajo = {
   rubros: RubroPresupuesto[];
@@ -33,6 +46,59 @@ function nombrePartida(partida: PartidaPresupuesto, apus: Apu[], recursos: Recur
 function codigoPartida(partida: PartidaPresupuesto, rubros: RubroPresupuesto[]) {
   const rubro = [...rubros].sort((a, b) => a.orden - b.orden).findIndex((actual) => actual.id === partida.rubroId) + 1;
   return `${rubro > 0 ? rubro : "?"}.${String(partida.codigo).padStart(2, "0")}`;
+}
+
+export function crearModeloCostoPrevisto(datos: DatosLegajo): ModeloCostoPrevisto {
+  const advertencias: string[] = [];
+  const rubrosOrdenados = [...datos.rubros].sort((a, b) => a.orden - b.orden);
+  const rubros = rubrosOrdenados.map((rubro) => {
+    const codigoRubro = String(rubro.orden + 1).padStart(2, "0");
+    const filas: FilaCostoPrevisto[] = [];
+    let completo = true;
+    for (const partida of datos.partidas.filter((actual) => actual.rubroId === rubro.id).sort((a, b) => a.codigo - b.codigo)) {
+      const cantidad = cantidadDesdeFormula(partida.formulaCantidad);
+      const precio = precioRecursoPresupuesto(partida.tipo, partida.recursoId, datos.apus, datos.recursos);
+      const codigo = `${codigoRubro}.${partida.codigo}`;
+      const valida = Number.isFinite(cantidad) && precio !== null;
+      if (!valida) {
+        completo = false;
+        advertencias.push(`${codigo}: no se pudo calcular la partida por fórmula o referencia inválida.`);
+      }
+      const importe = valida ? cantidad * precio : null;
+      filas.push({
+        tipo: "partida",
+        codigo,
+        descripcion: nombrePartida(partida, datos.apus, datos.recursos),
+        unidad: partida.tipo === "APU" ? datos.apus.find((apu) => apu.id === partida.recursoId)?.unidad ?? "" : datos.recursos.find((recurso) => recurso.tipo === partida.tipo && recurso.id === partida.recursoId)?.unidad ?? "",
+        cantidad: valida ? cantidad : null,
+        precioUnitario: precio,
+        importe,
+        incidencia: null,
+      });
+      for (const oculto of partida.ocultos ?? []) {
+        let costo = 0;
+        let ocultoValido = true;
+        for (const componente of oculto.componentes) {
+          const cantidadOculta = cantidadDesdeFormula(componente.formulaCantidad, componente.factor);
+          const precioOculto = precioRecursoPresupuesto(componente.tipo, componente.recursoId, datos.apus, datos.recursos);
+          if (!Number.isFinite(cantidadOculta) || precioOculto === null) {
+            ocultoValido = false;
+            break;
+          }
+          costo += cantidadOculta * precioOculto;
+        }
+        if (!ocultoValido) {
+          completo = false;
+          advertencias.push(`${codigo}: no se pudo calcular el costo oculto “${oculto.descripcion}”.`);
+        }
+        filas.push({ tipo: "oculto", codigo: "", descripcion: `- ${oculto.descripcion}`, unidad: "gl", cantidad: ocultoValido ? 1 : null, precioUnitario: ocultoValido ? costo : null, importe: ocultoValido ? costo : null, incidencia: null });
+      }
+    }
+    return { codigo: codigoRubro, nombre: rubro.nombre, filas, subtotal: filas.reduce((suma, fila) => suma + (fila.importe ?? 0), 0), completo };
+  });
+  const total = rubros.reduce((suma, rubro) => suma + rubro.subtotal, 0);
+  for (const rubro of rubros) for (const fila of rubro.filas) fila.incidencia = fila.importe !== null && total !== 0 ? fila.importe / total : fila.importe === 0 ? 0 : null;
+  return { rubros, total, completo: rubros.every((rubro) => rubro.completo), advertencias };
 }
 
 type UsoRecurso = { partida: string; tipo: Exclude<TipoComponenteApu, "APU">; recursoId: number; cantidad: number; origen: string };

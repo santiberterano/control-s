@@ -2,13 +2,16 @@
 
 import { useMemo, useState } from "react";
 import type { Apu, RecursoApu } from "./apu";
-import { crearInformeLegajo, sanitizarNombreArchivo, type InformeLegajo, type TipoInformeLegajo } from "./legajo";
+import { crearInformeLegajo, crearModeloCostoPrevisto, sanitizarNombreArchivo, type ConfiguracionCostoPrevisto, type InformeLegajo, type TipoInformeLegajo } from "./legajo";
 import type { PartidaPresupuesto, RubroPresupuesto } from "./presupuesto";
+import { useEstadoPersistido } from "./useEstadoPersistido";
 import type { CategoriaInsumo, Insumo } from "./VistaInsumos";
 
 type Formato = "pdf" | "xlsx";
 type Props = {
+  proyectoId: string;
   nombreObra: string;
+  dolarPredeterminado: number;
   rubros: RubroPresupuesto[];
   partidas: PartidaPresupuesto[];
   apus: Apu[];
@@ -138,13 +141,20 @@ async function generarExcel(informe: InformeLegajo, nombreObra: string) {
   return new Blob([contenido], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
-export default function VistaLegajo({ nombreObra, rubros, partidas, apus, recursos, insumos, categoriasInsumos }: Props) {
+export default function VistaLegajo({ proyectoId, nombreObra, dolarPredeterminado, rubros, partidas, apus, recursos, insumos, categoriasInsumos }: Props) {
   const [tipo, setTipo] = useState<TipoInformeLegajo>("previsto");
   const [formato, setFormato] = useState<Formato>("pdf");
   const [estado, setEstado] = useState("");
   const [generando, setGenerando] = useState(false);
+  const [configuracion, setConfiguracion] = useEstadoPersistido<ConfiguracionCostoPrevisto>(`ctrl-s:${proyectoId}:costo-previsto-config`, { nombreObra, version: "V00", dolar: dolarPredeterminado, base: "620" });
   const familiasInsumos = useMemo(() => insumos.map((insumo) => ({ recursoId: insumo.id, nombre: categoriasInsumos.find((categoria) => categoria.id === insumo.categoriaId)?.nombre ?? "Sin categoría" })), [categoriasInsumos, insumos]);
-  const informe = useMemo(() => crearInformeLegajo(tipo, { rubros, partidas, apus, recursos, familiasInsumos }), [tipo, rubros, partidas, apus, recursos, familiasInsumos]);
+  const datos = useMemo(() => ({ rubros, partidas, apus, recursos, familiasInsumos }), [rubros, partidas, apus, recursos, familiasInsumos]);
+  const informe = useMemo(() => crearInformeLegajo(tipo, datos), [tipo, datos]);
+  const costoPrevisto = useMemo(() => crearModeloCostoPrevisto(datos), [datos]);
+  const advertencias = tipo === "previsto" ? costoPrevisto.advertencias : informe.advertencias;
+  const totalInforme = tipo === "previsto" ? costoPrevisto.total : informe.total;
+  const cantidadSecciones = tipo === "previsto" ? costoPrevisto.rubros.length : informe.secciones.length;
+  const cantidadRegistros = tipo === "previsto" ? costoPrevisto.rubros.reduce((suma, rubro) => suma + rubro.filas.length, 0) : informe.secciones.reduce((suma, seccion) => suma + seccion.filas.length, 0);
   const seleccion = opciones.find((opcion) => opcion.id === tipo) ?? opciones[0];
 
   async function exportar() {
@@ -152,8 +162,15 @@ export default function VistaLegajo({ nombreObra, rubros, partidas, apus, recurs
     setEstado("Generando el archivo con los datos actuales…");
     try {
       const etiqueta = { previsto: "Costo_Previsto", explotado: "Costo_Explotado", insumos: "Explosion_Insumos" }[tipo];
-      const nombre = `${sanitizarNombreArchivo(`CTRL_S_${etiqueta}_${nombreObra}_${fechaArchivo()}`)}.${formato}`;
-      const blob = formato === "pdf" ? await generarPdf(informe, nombreObra) : await generarExcel(informe, nombreObra);
+      const obraExportada = tipo === "previsto" ? configuracion.nombreObra : nombreObra;
+      const nombre = `${sanitizarNombreArchivo(`CTRL_S_${etiqueta}_${obraExportada}_${fechaArchivo()}`)}.${formato}`;
+      let blob: Blob;
+      if (tipo === "previsto") {
+        const exportadores = await import("./exportarCostoPrevisto");
+        blob = formato === "pdf" ? exportadores.generarPdfCostoPrevisto(costoPrevisto, configuracion) : await exportadores.generarExcelCostoPrevisto(costoPrevisto, configuracion);
+      } else {
+        blob = formato === "pdf" ? await generarPdf(informe, nombreObra) : await generarExcel(informe, nombreObra);
+      }
       const resultado = await guardarArchivo(blob, nombre, formato === "pdf" ? "Documento PDF" : "Libro de Excel");
       setEstado(resultado === "cancelado" ? "Exportación cancelada." : resultado === "guardado" ? `Archivo guardado: ${nombre}` : `Descarga iniciada: ${nombre}`);
     } catch (error) {
@@ -171,9 +188,15 @@ export default function VistaLegajo({ nombreObra, rubros, partidas, apus, recurs
       <div className="rounded-lg border border-zinc-300 bg-white">
         <div className="border-b border-zinc-200 p-5"><div className="text-lg font-bold">{seleccion.titulo}</div><p className="mt-1 text-sm text-zinc-500">{informe.descripcion}</p></div>
         <div className="p-5">
+          {tipo === "previsto" && <div className="mb-5 grid gap-3 border-b border-zinc-200 pb-5 sm:grid-cols-2">
+            <CampoConfiguracion etiqueta="Nombre de obra" valor={configuracion.nombreObra} onChange={(valor) => setConfiguracion((actual) => ({ ...actual, nombreObra: valor }))}/>
+            <CampoConfiguracion etiqueta="Versión" valor={configuracion.version} onChange={(valor) => setConfiguracion((actual) => ({ ...actual, version: valor }))}/>
+            <CampoConfiguracion etiqueta="Valor dólar" tipo="number" valor={String(configuracion.dolar)} onChange={(valor) => setConfiguracion((actual) => ({ ...actual, dolar: Number(valor) || 0 }))}/>
+            <CampoConfiguracion etiqueta="BASE" valor={configuracion.base} onChange={(valor) => setConfiguracion((actual) => ({ ...actual, base: valor }))}/>
+          </div>}
           <div className="mb-5"><div className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">Formato</div><div className="flex gap-2">{(["pdf", "xlsx"] as Formato[]).map((actual) => <button key={actual} type="button" onClick={() => setFormato(actual)} className={`rounded-md border px-5 py-2 text-sm font-bold uppercase ${formato === actual ? "border-zinc-900 bg-zinc-900 text-white" : "border-zinc-300 bg-white text-zinc-600"}`}>{actual === "xlsx" ? "Excel" : "PDF"}</button>)}</div></div>
-          <div className={`mb-5 rounded-md border px-4 py-3 text-sm ${informe.advertencias.length ? "border-amber-200 bg-amber-50 text-amber-900" : "border-green-200 bg-green-50 text-green-800"}`}><div className="font-semibold">{informe.advertencias.length ? `${informe.advertencias.length} advertencia${informe.advertencias.length === 1 ? "" : "s"} de cálculo` : "Datos listos para exportar"}</div>{informe.advertencias.length > 0 && <ul className="mt-2 max-h-32 list-disc overflow-auto pl-5 text-xs">{informe.advertencias.map((advertencia, indice) => <li key={`${indice}-${advertencia}`}>{advertencia}</li>)}</ul>}</div>
-          <div className="mb-5 grid grid-cols-3 gap-3 text-center"><Resumen etiqueta="Secciones" valor={informe.secciones.length}/><Resumen etiqueta="Registros" valor={informe.secciones.reduce((suma, seccion) => suma + seccion.filas.length, 0)}/><Resumen etiqueta="Total" valor={informe.total === undefined ? "—" : moneda(informe.total)}/></div>
+          <div className={`mb-5 rounded-md border px-4 py-3 text-sm ${advertencias.length ? "border-amber-200 bg-amber-50 text-amber-900" : "border-green-200 bg-green-50 text-green-800"}`}><div className="font-semibold">{advertencias.length ? `${advertencias.length} advertencia${advertencias.length === 1 ? "" : "s"} de cálculo` : "Datos listos para exportar"}</div>{advertencias.length > 0 && <ul className="mt-2 max-h-32 list-disc overflow-auto pl-5 text-xs">{advertencias.map((advertencia, indice) => <li key={`${indice}-${advertencia}`}>{advertencia}</li>)}</ul>}</div>
+          <div className="mb-5 grid grid-cols-3 gap-3 text-center"><Resumen etiqueta="Secciones" valor={cantidadSecciones}/><Resumen etiqueta="Registros" valor={cantidadRegistros}/><Resumen etiqueta="Total" valor={totalInforme === undefined ? "—" : moneda(totalInforme)}/></div>
           <button type="button" disabled={generando} onClick={exportar} className="rounded-md bg-[#E6B012] px-5 py-3 text-sm font-bold text-zinc-950 hover:bg-[#d5a20f] disabled:cursor-wait disabled:opacity-60">{generando ? "Generando…" : `Exportar ${formato === "pdf" ? "PDF" : "Excel"}`}</button>
           <p className="mt-3 text-xs text-zinc-500">Si el navegador admite el selector de guardado, podrás elegir ubicación y nombre. En los demás navegadores se iniciará una descarga convencional.</p>
           {estado && <div role="status" className="mt-3 text-sm font-medium text-zinc-700">{estado}</div>}
@@ -181,6 +204,10 @@ export default function VistaLegajo({ nombreObra, rubros, partidas, apus, recurs
       </div>
     </div>
   </div>;
+}
+
+function CampoConfiguracion({ etiqueta, valor, onChange, tipo = "text" }: { etiqueta: string; valor: string; onChange: (valor: string) => void; tipo?: "text" | "number" }) {
+  return <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">{etiqueta}</span><input type={tipo} min={tipo === "number" ? 0 : undefined} step={tipo === "number" ? "0.01" : undefined} value={valor} onChange={(evento) => onChange(evento.target.value)} className="h-10 w-full rounded border border-zinc-300 bg-[#fafafa] px-3 text-sm outline-none focus:border-[#E6B012] focus:bg-white"/></label>;
 }
 
 function Resumen({ etiqueta, valor }: { etiqueta: string; valor: string | number }) {
