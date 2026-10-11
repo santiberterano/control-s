@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CTRL S
 
-## Getting Started
+CTRL S es un software web en desarrollo para la presupuestación y gestión de obras. El estado actual implementa el flujo visual principal, la administración inicial de recursos de un presupuesto y cálculos basados en fórmulas y referencias.
 
-First, run the development server:
+Este repositorio conserva el estado actual del prototipo para facilitar su evaluación, continuidad de desarrollo y colaboración.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Tecnologías
+
+- Next.js 16 con App Router y Turbopack.
+- React 19.
+- TypeScript 5 en modo estricto.
+- Tailwind CSS 4.
+- ESLint 9 con las reglas recomendadas de Next.js.
+- Persistencia temporal en `localStorage` del navegador.
+
+Actualmente no existe un backend, una API ni una base de datos conectada. El inicio de sesión es simulado y no valida credenciales contra un servidor.
+
+## Estructura del proyecto
+
+```text
+ctrl-s/
+├── app/
+│   ├── page.tsx                     # Entrada y redirección según sesión local
+│   ├── layout.tsx                   # Layout raíz y metadatos
+│   ├── globals.css                  # Estilos globales y Tailwind CSS
+│   ├── login/                       # Pantalla de acceso simulado
+│   ├── home/                        # Panel principal
+│   ├── biblioteca/                  # Vista inicial de Biblioteca CONSCA
+│   ├── estadisticas/                # Vista inicial de indicadores
+│   └── proyectos/
+│       ├── page.tsx                 # Presupuesto de proyecto actual
+│       └── [id]/
+│           ├── page.tsx             # Ruta dinámica de proyecto
+│           └── componentes/         # Ribbon, vistas, persistencia y cálculos
+├── public/                          # Recursos estáticos
+├── eslint.config.mjs                # Configuración de ESLint
+├── next.config.ts                   # Configuración de Next.js
+├── postcss.config.mjs               # Configuración de PostCSS/Tailwind
+├── tsconfig.json                    # Configuración de TypeScript
+├── package.json                     # Scripts y dependencias
+└── package-lock.json                # Versiones reproducibles de dependencias
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Requisitos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 20 o posterior.
+- npm 10 o posterior.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Instalación y ejecución local
 
-## Learn More
+1. Clonar el repositorio y entrar en su carpeta:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   git clone <URL_DEL_REPOSITORIO>
+   cd ctrl-s
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. Instalar las dependencias exactas del lockfile:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   npm ci
+   ```
 
-## Deploy on Vercel
+3. Iniciar el servidor de desarrollo:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```bash
+   npm run dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Abrir [http://localhost:3000](http://localhost:3000).
+
+Para comprobar el build de producción:
+
+```bash
+npm run build
+npm start
+```
+
+No se requieren variables de entorno para ejecutar el estado actual.
+
+## Funcionalidades implementadas
+
+- Pantalla de acceso y sesión simulada mediante `localStorage`.
+- Home con accesos a proyectos, biblioteca y estadísticas.
+- Navegación del proyecto mediante ribbon.
+- Gestión de ítems del presupuesto.
+- Gestión de recursos de mano de obra y equipos.
+- Gestión inicial de subcontratos y constantes.
+- Fórmulas de precios con referencias entre recursos.
+- Persistencia local de datos del proyecto en el navegador.
+- Indicadores de guardado simulados y navegación de regreso al inicio.
+- Rutas estáticas y ruta dinámica `/proyectos/[id]`.
+
+## Pendiente o en desarrollo
+
+- Backend y API para autenticación, proyectos y presupuestos.
+- Base de datos y persistencia multiusuario.
+- Autenticación y autorización reales.
+- Listado, creación y selección dinámica de proyectos.
+- Biblioteca CONSCA completa: APU, insumos, precios, constantes y familias.
+- Módulos de Presupuesto, APU e Insumos.
+- Seguimiento de obra, diagramas de Gantt previsto/real y análisis comparativo.
+- Estadísticas e indicadores alimentados con datos reales.
+- Exportación de presupuesto, biblioteca y legajo.
+- Sincronización y retroalimentación de la biblioteca.
+- Pruebas automatizadas y estrategia de despliegue.
+
+## Datos y seguridad
+
+- Los archivos `.env*`, certificados, claves privadas y bases de datos locales están excluidos del repositorio.
+- Si más adelante se agregan variables de entorno, documentarlas en `.env.example` sin incluir valores sensibles.
+- `localStorage` es una solución temporal del prototipo y no debe utilizarse para almacenar credenciales ni información sensible en producción.
