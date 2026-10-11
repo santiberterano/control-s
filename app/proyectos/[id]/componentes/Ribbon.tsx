@@ -19,6 +19,7 @@ const menuItems = [
   "Subcontratos",
   "Constantes",
   "Seguimiento",
+  "Legajo de Obra",
 ];
 
 export default function Ribbon({
@@ -330,9 +331,7 @@ export default function Ribbon({
                           type="button"
                           onClick={() => {
                             setActiveMenu(null);
-                            alert(
-                              "Exportar legajo"
-                            );
+                            setActiveSection("Legajo de Obra");
                           }}
                           className="w-full rounded-md px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-100"
                         >

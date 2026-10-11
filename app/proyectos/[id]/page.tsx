@@ -24,6 +24,7 @@ import VistaInsumos, {
   type Insumo,
 } from "./componentes/VistaInsumos";
 import VistaApu from "./componentes/VistaApu";
+import VistaLegajo from "./componentes/VistaLegajo";
 import type { Apu, FamiliaApu, RecursoApu } from "./componentes/apu";
 import type { PartidaPresupuesto, RubroPresupuesto } from "./componentes/presupuesto";
 
@@ -256,6 +257,18 @@ export default function ProyectoPage() {
             />
           )}
 
+          {activeSection === "Legajo de Obra" && (
+            <VistaLegajo
+              nombreObra="Edificio Varese"
+              rubros={rubros}
+              partidas={partidas}
+              apus={apus}
+              recursos={recursosApu}
+              insumos={insumos}
+              categoriasInsumos={categoriasInsumos}
+            />
+          )}
+
           {activeSection !== "Items" &&
             activeSection !== "Presupuesto" &&
             activeSection !== "Insumos" &&
@@ -263,7 +276,8 @@ export default function ProyectoPage() {
             activeSection !== "Mano de obra" &&
             activeSection !== "Equipos" &&
             activeSection !== "Subcontratos" &&
-            activeSection !== "Constantes" && (
+            activeSection !== "Constantes" &&
+            activeSection !== "Legajo de Obra" && (
             <div className="min-h-[600px] rounded-lg border border-zinc-300 bg-white">
 
               <div className="flex h-10 items-center border-b border-zinc-200 bg-[#f7f7f5] px-4">
