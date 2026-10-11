@@ -23,7 +23,7 @@ import VistaInsumos, {
   type Insumo,
 } from "./componentes/VistaInsumos";
 import VistaApu from "./componentes/VistaApu";
-import type { Apu, RecursoApu } from "./componentes/apu";
+import type { Apu, FamiliaApu, RecursoApu } from "./componentes/apu";
 
 export type ItemPresupuesto = {
   id: number;
@@ -70,6 +70,7 @@ export default function ProyectoPage() {
     []
   );
   const [apus, setApus] = useEstadoPersistido<Apu[]>("ctrl-s:biblioteca:apus", []);
+  const [familiasApu, setFamiliasApu] = useEstadoPersistido<FamiliaApu[]>("ctrl-s:biblioteca:familias-apu", []);
 
   const [manoDeObra, setManoDeObra] = useEstadoPersistido<ManoDeObra[]>(
     "ctrl-s:26031:mano-de-obra",
@@ -204,7 +205,7 @@ export default function ProyectoPage() {
           )}
 
           {activeSection === "APU" && (
-            <VistaApu apus={apus} setApus={setApus} recursos={recursosApu} />
+            <VistaApu apus={apus} setApus={setApus} familias={familiasApu} setFamilias={setFamiliasApu} recursos={recursosApu} />
           )}
 
           {activeSection === "Mano de obra" && (

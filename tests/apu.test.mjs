@@ -5,12 +5,27 @@ import {
   calcularCostoApu,
   creariaCiclo,
   explotarApu,
+  proximoCodigoApu,
 } from "../app/proyectos/[id]/componentes/apu.ts";
 
 const recursos = [
   { id: 1, tipo: "INS", codigo: "HAO-001", nombre: "Cemento", unidad: "kg", precio: 10 },
   { id: 2, tipo: "MDO", codigo: "001", nombre: "Oficial", unidad: "h", precio: 100 },
 ];
+
+test("genera correlativos independientes por familia sin reutilizar códigos", () => {
+  const familia = { id: 7, nombre: "Revoques", prefijo: "REV", ultimoCorrelativo: 1, creado: "", modificado: "" };
+  const existentes = [{ id: 1, familiaId: 7, codigo: "REV-002", descripcion: "Existente", unidad: "m2", componentes: [], modificado: "", orden: 0 }];
+  assert.deepEqual(proximoCodigoApu(familia, existentes), { codigo: "REV-003", correlativo: 3 });
+});
+
+test("el próximo código no modifica APU existentes sin familia", () => {
+  const familia = { id: 8, nombre: "Pinturas", prefijo: "PIN", ultimoCorrelativo: 0, creado: "", modificado: "" };
+  const legado = { id: 2, codigo: "APU-VIEJO", descripcion: "Legado", unidad: "u", componentes: [], modificado: "", orden: 0 };
+  assert.deepEqual(proximoCodigoApu(familia, [legado]), { codigo: "PIN-001", correlativo: 1 });
+  assert.equal(legado.codigo, "APU-VIEJO");
+  assert.equal(legado.familiaId, undefined);
+});
 
 const apus = [
   {

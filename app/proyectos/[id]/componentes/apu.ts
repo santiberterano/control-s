@@ -15,12 +15,22 @@ export type ComponenteApu = {
 
 export type Apu = {
   id: number;
+  familiaId?: number;
   codigo: string;
   descripcion: string;
   unidad: string;
   componentes: ComponenteApu[];
   modificado: string;
   orden: number;
+};
+
+export type FamiliaApu = {
+  id: number;
+  nombre: string;
+  prefijo: string;
+  ultimoCorrelativo: number;
+  creado: string;
+  modificado: string;
 };
 
 export type RecursoApu = {
@@ -31,6 +41,16 @@ export type RecursoApu = {
   unidad: string;
   precio: number;
 };
+
+export function proximoCodigoApu(familia: FamiliaApu, apus: Apu[]) {
+  let correlativo = familia.ultimoCorrelativo + 1;
+  let codigo = `${familia.prefijo}-${String(correlativo).padStart(3, "0")}`;
+  while (apus.some((apu) => apu.codigo === codigo)) {
+    correlativo += 1;
+    codigo = `${familia.prefijo}-${String(correlativo).padStart(3, "0")}`;
+  }
+  return { codigo, correlativo };
+}
 
 export function cantidadComponente(componente: ComponenteApu) {
   const formula = componente.formulaCantidad.trim();
