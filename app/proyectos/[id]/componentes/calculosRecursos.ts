@@ -14,7 +14,7 @@ function normalizar(texto: string) {
     .toUpperCase();
 }
 
-function evaluarOperacion(expresion: string) {
+export function evaluarOperacion(expresion: string) {
   let posicion = 0;
 
   function omitirEspacios() {
