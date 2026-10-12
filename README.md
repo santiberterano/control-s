@@ -51,7 +51,7 @@ ctrl-s/
 1. Clonar el repositorio y entrar en su carpeta:
 
    ```bash
-   git clone <URL_DEL_REPOSITORIO>
+   git clone --branch fix/costo-previsto-tabla-responsive --single-branch https://github.com/santiberterano/control-s.git
    cd ctrl-s
    ```
 
@@ -78,16 +78,35 @@ npm start
 
 No se requieren variables de entorno para ejecutar el estado actual.
 
+La rama `fix/costo-previsto-tabla-responsive` contiene el estado funcional más reciente. Incluye de forma acumulativa las mejoras de recursos, APU, Costo Previsto y Legajo de Obra. La rama `main` conserva el estado inicial y no fue fusionada automáticamente.
+
+## Verificación
+
+```bash
+npm run test:formulas
+npm run test:apu
+npm run test:presupuesto
+npm run test:legajo
+npm run lint
+npm run build
+```
+
 ## Funcionalidades implementadas
 
 - Pantalla de acceso y sesión simulada mediante `localStorage`.
 - Home con accesos a proyectos, biblioteca y estadísticas.
 - Navegación del proyecto mediante ribbon.
-- Gestión de ítems del presupuesto.
-- Gestión de recursos de mano de obra y equipos.
-- Gestión inicial de subcontratos y constantes.
+- Gestión de ítems y rubros de obra.
+- Costo Previsto con partidas, fórmulas, APU, costos ocultos, subtotales y totales reactivos.
+- Gestión de insumos por categorías y códigos correlativos.
+- Gestión de APU por familias, composición con recursos y sub-APU anidados.
+- Gestión de mano de obra, equipos, subcontratos y constantes.
 - Fórmulas de precios con referencias entre recursos.
 - Persistencia local de datos del proyecto en el navegador.
+- Legajo de Obra con Costo Previsto, Costo Explotado y Explosión de Insumos.
+- Exportación de los informes en PDF y Excel.
+- Tabla responsive de Costo Previsto sin desplazamiento horizontal en escritorio.
+- Pruebas automatizadas de fórmulas, APU, presupuesto e informes.
 - Indicadores de guardado simulados y navegación de regreso al inicio.
 - Rutas estáticas y ruta dinámica `/proyectos/[id]`.
 
@@ -97,13 +116,11 @@ No se requieren variables de entorno para ejecutar el estado actual.
 - Base de datos y persistencia multiusuario.
 - Autenticación y autorización reales.
 - Listado, creación y selección dinámica de proyectos.
-- Biblioteca CONSCA completa: APU, insumos, precios, constantes y familias.
-- Módulos de Presupuesto, APU e Insumos.
+- Biblioteca CONSCA compartida y sincronización entre proyectos.
 - Seguimiento de obra, diagramas de Gantt previsto/real y análisis comparativo.
 - Estadísticas e indicadores alimentados con datos reales.
-- Exportación de presupuesto, biblioteca y legajo.
 - Sincronización y retroalimentación de la biblioteca.
-- Pruebas automatizadas y estrategia de despliegue.
+- Ampliación de pruebas de interfaz y estrategia de despliegue.
 
 ## Datos y seguridad
 
