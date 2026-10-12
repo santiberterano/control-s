@@ -20,7 +20,7 @@ export type FilaCostoPrevisto = {
 export type RubroCostoPrevisto = { codigo: string; nombre: string; filas: FilaCostoPrevisto[]; subtotal: number; completo: boolean };
 export type ModeloCostoPrevisto = { rubros: RubroCostoPrevisto[]; total: number; completo: boolean; advertencias: string[] };
 
-type DatosLegajo = {
+export type DatosLegajo = {
   rubros: RubroPresupuesto[];
   partidas: PartidaPresupuesto[];
   apus: Apu[];

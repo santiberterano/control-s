@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import ExcelJS from "exceljs";
 import { generarExcelCostoPrevisto, generarPdfCostoPrevisto } from "../app/proyectos/[id]/componentes/exportarCostoPrevisto.ts";
+import { generarExcelCostoExplotado, generarExcelExplosion, generarPdfCostoExplotado, generarPdfExplosion } from "../app/proyectos/[id]/componentes/exportarInformesUnificados.ts";
 import { crearInformeLegajo, crearModeloCostoPrevisto, sanitizarNombreArchivo } from "../app/proyectos/[id]/componentes/legajo.ts";
+import { crearModeloCostoExplotado, crearModeloExplosion } from "../app/proyectos/[id]/componentes/modelosInformesLegajo.ts";
 
 const rubros = [{ id: 1, nombre: "Estructura", orden: 0 }];
 const recursos = [
@@ -103,4 +105,61 @@ test("genera Excel editable con números, fórmulas e impresión A4 vertical", a
   assert.equal(hoja.getCell("F9").value.formula, "SUM(F7:F8)");
   assert.equal(hoja.getCell("F10").value.formula, "F9");
   assert.equal(hoja.getCell("G7").value.formula, "IFERROR(F7/$F$10,0)");
+});
+
+test("costo explotado conserva análisis unitario y concilia con costo previsto", () => {
+  const explotado = crearModeloCostoExplotado(datos);
+  assert.equal(explotado.rubros[0].partidas[0].analisis.componentes.length, 2);
+  assert.equal(explotado.rubros[0].partidas[0].analisis.costoUnitario, 3000);
+  assert.equal(explotado.rubros[0].partidas[0].ocultos[0].total, 1000);
+  assert.equal(explotado.rubros[0].partidas[0].total, 10000);
+  assert.equal(explotado.total, crearModeloCostoPrevisto(datos).total);
+});
+
+test("desarrolla sub-APU recursivamente sin duplicar su costo", () => {
+  const anidados = {
+    ...datos,
+    apus: [...apus, { id: 11, codigo: "EST-002", descripcion: "Principal", unidad: "m3", modificado: "", orden: 1, componentes: [{ id: 111, tipo: "APU", recursoId: 10, cantidad: 0, formulaCantidad: "=2", factor: 1, orden: 0 }] }],
+    partidas: [{ ...partidas[0], recursoId: 11, ocultos: [] }],
+  };
+  const explotado = crearModeloCostoExplotado(anidados);
+  assert.equal(explotado.rubros[0].partidas[0].analisis.subanalisis[0].coeficientePadre, 2);
+  assert.equal(explotado.rubros[0].partidas[0].analisis.subanalisis[0].incidenciaPadre, 6000);
+  assert.equal(explotado.total, 18000);
+});
+
+test("explosión consolida por ID e incorpora cantidades ocultas independientes", () => {
+  const explosion = crearModeloExplosion(datos);
+  const recursosConsolidados = explosion.grupos.flatMap((grupo) => grupo.familias.flatMap((familia) => familia.recursos));
+  assert.equal(recursosConsolidados.find((recurso) => recurso.id === 1).cantidad, 30);
+  assert.equal(recursosConsolidados.find((recurso) => recurso.id === 2).cantidad, 7);
+  assert.equal(explosion.total, 10000);
+  assert.equal(explosion.diferencia, 0);
+});
+
+test("exporta los dos informes en PDF A4 vertical y Excel con fórmulas", async () => {
+  const configuracion = { nombreObra: "Obra", version: "V00", dolar: 1450, base: "620" };
+  const explotado = crearModeloCostoExplotado(datos), explosion = crearModeloExplosion(datos);
+  for (const pdf of [generarPdfCostoExplotado(explotado, configuracion), generarPdfExplosion(explosion, configuracion)]) {
+    const contenido = Buffer.from(await pdf.arrayBuffer()).toString("latin1");
+    assert.match(contenido, /\/MediaBox \[0 0 595\.\d+ 841\.\d+\]/);
+    assert.match(contenido, /Hoja Nro/);
+  }
+  for (const [blob, nombre] of [[await generarExcelCostoExplotado(explotado, configuracion), "Costo Explotado"], [await generarExcelExplosion(explosion, configuracion), "Explosión de Insumos"]]) {
+    const libro = new ExcelJS.Workbook(); await libro.xlsx.load(await blob.arrayBuffer()); const hoja = libro.getWorksheet(nombre);
+    assert.equal(hoja.pageSetup.orientation, "portrait");
+    assert.equal(hoja.pageSetup.fitToWidth, 1);
+    const formulas = []; hoja.eachRow((fila) => fila.eachCell((celda) => { if (celda.value?.formula) formulas.push(celda.value.formula); }));
+    assert.ok(formulas.some((formula) => formula.includes("*")));
+    assert.ok(formulas.some((formula) => formula.includes("+")));
+    if (nombre === "Costo Explotado") {
+      const totalPartida = hoja.findRow(hoja.getColumn(3).values.findIndex((valor) => String(valor).startsWith("Total consolidado")));
+      const subtotalRubro = hoja.findRow(hoja.getColumn(3).values.findIndex((valor) => valor === "SUBTOTAL 01"));
+      assert.equal(subtotalRubro.getCell(7).value.formula, `G${totalPartida.number}`);
+    } else {
+      const subtotalFamilia = hoja.findRow(hoja.getColumn(2).values.findIndex((valor) => String(valor).startsWith("Subtotal ")));
+      const subtotalGrupo = hoja.findRow(hoja.getColumn(2).values.findIndex((valor) => String(valor).startsWith("SUBTOTAL ")));
+      assert.equal(subtotalGrupo.getCell(6).value.formula, `F${subtotalFamilia.number}`);
+    }
+  }
 });
