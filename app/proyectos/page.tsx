@@ -200,7 +200,7 @@ export default function ProyectoPage() {
       />
 
       <section className="px-6 pb-10 pt-[125px]">
-        <div className="mx-auto max-w-[1600px]">
+        <div className="mx-auto w-full min-w-0 max-w-[1600px]">
 
           {/* ITEMS */}
 
