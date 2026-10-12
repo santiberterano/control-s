@@ -5,6 +5,7 @@ import { generarExcelCostoPrevisto, generarPdfCostoPrevisto } from "../app/proye
 import { generarExcelCostoExplotado, generarExcelExplosion, generarPdfCostoExplotado, generarPdfExplosion } from "../app/proyectos/[id]/componentes/exportarInformesUnificados.ts";
 import { crearInformeLegajo, crearModeloCostoPrevisto, sanitizarNombreArchivo } from "../app/proyectos/[id]/componentes/legajo.ts";
 import { crearModeloCostoExplotado, crearModeloExplosion } from "../app/proyectos/[id]/componentes/modelosInformesLegajo.ts";
+import { calcularResumenCostoPrevisto } from "../app/proyectos/[id]/componentes/presupuesto.ts";
 
 const rubros = [{ id: 1, nombre: "Estructura", orden: 0 }];
 const recursos = [
@@ -55,11 +56,13 @@ test("sanitiza nombres incompatibles con el sistema operativo", () => {
 
 test("el modelo de costo previsto intercala ocultos y evita duplicar sus importes", () => {
   const modelo = crearModeloCostoPrevisto(datos);
+  const resumenPantalla = calcularResumenCostoPrevisto(partidas, rubros, apus, recursos);
   assert.deepEqual(modelo.rubros[0].filas.map((fila) => fila.tipo), ["partida", "oculto"]);
   assert.equal(modelo.rubros[0].filas[0].importe, 9000);
   assert.equal(modelo.rubros[0].filas[1].importe, 1000);
   assert.equal(modelo.rubros[0].subtotal, 10000);
   assert.equal(modelo.total, 10000);
+  assert.equal(modelo.total, resumenPantalla.total);
   assert.equal(modelo.rubros[0].filas[0].incidencia, 0.9);
   assert.equal(modelo.rubros[0].filas[1].incidencia, 0.1);
 });

@@ -177,7 +177,7 @@ export default function Ribbon({
                   }`}
                 >
 
-                  {item}
+                  {item === "Presupuesto" ? "Costo Previsto" : item}
 
                   {isSelected && (
                     <div className="absolute bottom-0 left-3 right-3 h-[3px] bg-[#E6B012]" />
@@ -211,7 +211,7 @@ export default function Ribbon({
                           </div>
 
                           <div className="mt-0.5 text-xs text-zinc-500">
-                            Guarda los datos propios del presupuesto.
+                            Guarda los datos propios del costo previsto.
                           </div>
                         </button>
 
@@ -306,12 +306,12 @@ export default function Ribbon({
                           onClick={() => {
                             setActiveMenu(null);
                             alert(
-                              "Exportar presupuesto"
+                              "Exportar costo previsto"
                             );
                           }}
                           className="w-full rounded-md px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-100"
                         >
-                          Exportar presupuesto
+                          Exportar costo previsto
                         </button>
 
                         <button

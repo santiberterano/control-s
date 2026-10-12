@@ -1,5 +1,5 @@
 import { cantidadComponente, type Apu, type RecursoApu, type TipoComponenteApu } from "./apu.ts";
-import { calcularPartida, cantidadDesdeFormula, precioRecursoPresupuesto, type PartidaPresupuesto, type RubroPresupuesto } from "./presupuesto.ts";
+import { calcularCostoOculto, calcularPartida, calcularResumenCostoPrevisto, cantidadDesdeFormula, type PartidaPresupuesto, type RubroPresupuesto } from "./presupuesto.ts";
 
 export type TipoInformeLegajo = "previsto" | "explotado" | "insumos";
 export type FilaInforme = Record<string, string | number>;
@@ -50,43 +50,35 @@ function codigoPartida(partida: PartidaPresupuesto, rubros: RubroPresupuesto[]) 
 
 export function crearModeloCostoPrevisto(datos: DatosLegajo): ModeloCostoPrevisto {
   const advertencias: string[] = [];
+  const resumen = calcularResumenCostoPrevisto(datos.partidas, datos.rubros, datos.apus, datos.recursos);
+  const calculos = new Map(resumen.partidas.map((resultado) => [resultado.partidaId, resultado.calculo]));
   const rubrosOrdenados = [...datos.rubros].sort((a, b) => a.orden - b.orden);
   const rubros = rubrosOrdenados.map((rubro) => {
     const codigoRubro = String(rubro.orden + 1).padStart(2, "0");
     const filas: FilaCostoPrevisto[] = [];
     let completo = true;
     for (const partida of datos.partidas.filter((actual) => actual.rubroId === rubro.id).sort((a, b) => a.codigo - b.codigo)) {
-      const cantidad = cantidadDesdeFormula(partida.formulaCantidad);
-      const precio = precioRecursoPresupuesto(partida.tipo, partida.recursoId, datos.apus, datos.recursos);
+      const calculo = calculos.get(partida.id) ?? null;
       const codigo = `${codigoRubro}.${partida.codigo}`;
-      const valida = Number.isFinite(cantidad) && precio !== null;
+      const valida = calculo !== null;
       if (!valida) {
         completo = false;
         advertencias.push(`${codigo}: no se pudo calcular la partida por fórmula o referencia inválida.`);
       }
-      const importe = valida ? cantidad * precio : null;
       filas.push({
         tipo: "partida",
         codigo,
         descripcion: nombrePartida(partida, datos.apus, datos.recursos),
         unidad: partida.tipo === "APU" ? datos.apus.find((apu) => apu.id === partida.recursoId)?.unidad ?? "" : datos.recursos.find((recurso) => recurso.tipo === partida.tipo && recurso.id === partida.recursoId)?.unidad ?? "",
-        cantidad: valida ? cantidad : null,
-        precioUnitario: precio,
-        importe,
+        cantidad: calculo?.cantidad ?? null,
+        precioUnitario: calculo?.precio ?? null,
+        importe: calculo?.propio ?? null,
         incidencia: null,
       });
       for (const oculto of partida.ocultos ?? []) {
-        let costo = 0;
-        let ocultoValido = true;
-        for (const componente of oculto.componentes) {
-          const cantidadOculta = cantidadDesdeFormula(componente.formulaCantidad, componente.factor);
-          const precioOculto = precioRecursoPresupuesto(componente.tipo, componente.recursoId, datos.apus, datos.recursos);
-          if (!Number.isFinite(cantidadOculta) || precioOculto === null) {
-            ocultoValido = false;
-            break;
-          }
-          costo += cantidadOculta * precioOculto;
-        }
+        const costoCalculado = calcularCostoOculto(oculto, datos.apus, datos.recursos);
+        const ocultoValido = valida && costoCalculado !== null;
+        const costo = costoCalculado ?? 0;
         if (!ocultoValido) {
           completo = false;
           advertencias.push(`${codigo}: no se pudo calcular el costo oculto “${oculto.descripcion}”.`);
@@ -94,9 +86,9 @@ export function crearModeloCostoPrevisto(datos: DatosLegajo): ModeloCostoPrevist
         filas.push({ tipo: "oculto", codigo: "", descripcion: `- ${oculto.descripcion}`, unidad: "gl", cantidad: ocultoValido ? 1 : null, precioUnitario: ocultoValido ? costo : null, importe: ocultoValido ? costo : null, incidencia: null });
       }
     }
-    return { codigo: codigoRubro, nombre: rubro.nombre, filas, subtotal: filas.reduce((suma, fila) => suma + (fila.importe ?? 0), 0), completo };
+    return { codigo: codigoRubro, nombre: rubro.nombre, filas, subtotal: resumen.rubros.find((actual) => actual.rubroId === rubro.id)?.subtotal ?? 0, completo };
   });
-  const total = rubros.reduce((suma, rubro) => suma + rubro.subtotal, 0);
+  const total = resumen.total;
   for (const rubro of rubros) for (const fila of rubro.filas) fila.incidencia = fila.importe !== null && total !== 0 ? fila.importe / total : fila.importe === 0 ? 0 : null;
   return { rubros, total, completo: rubros.every((rubro) => rubro.completo), advertencias };
 }
@@ -170,6 +162,7 @@ export function crearInformeLegajo(tipo: TipoInformeLegajo, datos: DatosLegajo):
   const rubrosOrdenados = [...datos.rubros].sort((a, b) => a.orden - b.orden);
 
   if (tipo === "previsto") {
+    const resumen = calcularResumenCostoPrevisto(datos.partidas, datos.rubros, datos.apus, datos.recursos);
     const secciones = rubrosOrdenados.map((rubro) => {
       const filas = datos.partidas.filter((partida) => partida.rubroId === rubro.id).sort((a, b) => a.codigo - b.codigo).map((partida) => {
         const calculo = calcularPartida(partida, datos.apus, datos.recursos);
@@ -180,14 +173,15 @@ export function crearInformeLegajo(tipo: TipoInformeLegajo, datos: DatosLegajo):
           Fórmula: partida.formulaCantidad,
           Cantidad: calculo?.cantidad ?? "Error",
           Unidad: partida.tipo === "APU" ? datos.apus.find((apu) => apu.id === partida.recursoId)?.unidad ?? "" : datos.recursos.find((recurso) => recurso.tipo === partida.tipo && recurso.id === partida.recursoId)?.unidad ?? "",
-          "Precio unitario": calculo?.precioConsolidado ?? calculo?.precio ?? "Error",
+          "Precio unitario": calculo?.precio ?? "Error",
+          "Importe propio": calculo?.propio ?? "Error",
           "Costos ocultos": calculo?.ocultos ?? "Error",
-          Importe: calculo?.consolidado ?? "Error",
+          "Importe consolidado": calculo?.consolidado ?? "Error",
         };
       });
-      return { titulo: rubro.nombre, columnas: ["Código", "Descripción", "Fórmula", "Cantidad", "Unidad", "Precio unitario", "Costos ocultos", "Importe"], filas };
+      return { titulo: rubro.nombre, columnas: ["Código", "Descripción", "Fórmula", "Cantidad", "Unidad", "Precio unitario", "Importe propio", "Costos ocultos", "Importe consolidado"], filas };
     });
-    const total = datos.partidas.reduce((suma, partida) => suma + (calcularPartida(partida, datos.apus, datos.recursos)?.consolidado ?? 0), 0);
+    const total = resumen.total;
     return { titulo: "Costo previsto", descripcion: "Presupuesto vigente agrupado por rubros, con costos ocultos incluidos.", secciones, advertencias, total };
   }
 
